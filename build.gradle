@@ -1,0 +1,30 @@
+buildscript {
+    ext {
+        compose_version = '1.0.5'
+        coroutine_version = '1.5.2'
+        hilt_compiler_version = '1.0.0'
+        hilt_version = '2.40.1'
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.3.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.10"
+        classpath "com.google.dagger:hilt-android-gradle-plugin:$hilt_version"
+        classpath 'com.google.gms:google-services:4.3.13'
+    }
+}
+
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            force 'org.xerial:sqlite-jdbc:3.34.0'
+        }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
