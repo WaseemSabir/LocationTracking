@@ -36,6 +36,8 @@ class MainViewModel @Inject constructor(
 
     val isReceivingLocationUpdates = locationRepository.isReceivingLocationUpdates
     val lastLocation = locationRepository.lastLocation
+    val deviceId = locationRepository.deviceId
+    val isAccessible = locationRepository.isAccessible
 
     fun toggleLocationUpdates() {
         if (isReceivingLocationUpdates.value) {
@@ -43,6 +45,10 @@ class MainViewModel @Inject constructor(
         } else {
             startLocationUpdates()
         }
+    }
+
+    fun toggleAccessibility() {
+        serviceConnection.service?.toggleAccessibility()
     }
 
     private fun startLocationUpdates() {

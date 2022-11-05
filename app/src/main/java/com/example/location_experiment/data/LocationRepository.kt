@@ -2,21 +2,23 @@ package com.example.location_experiment.data
 
 import android.annotation.SuppressLint
 import android.location.Location
-import android.os.Build
 import android.os.HandlerThread
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.firestore.ktx.firestoreSettings
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.ktx.app
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,14 +32,20 @@ class LocationRepository @Inject constructor(
     private val _isReceivingUpdates = MutableStateFlow(false)
     val isReceivingLocationUpdates = _isReceivingUpdates.asStateFlow()
 
+    private val accessibility = MutableStateFlow(true)
+    val isAccessible = accessibility.asStateFlow()
+
     private val _lastLocation = MutableStateFlow<Location?>(null)
     val lastLocation = _lastLocation.asStateFlow()
+
+    val deviceId = 100
 
     @SuppressLint("MissingPermission") // Only called when holding location permission.
     fun startLocationUpdates() {
         val request = LocationRequest.create().apply {
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            interval = 30_000 // 30 seconds
+            interval = 30_000
+            fastestInterval = 15_000
         }
 
         val handlerThread = HandlerThread("LocationCallbackHandler")
@@ -57,21 +65,20 @@ class LocationRepository @Inject constructor(
     }
 
     private fun pushUpdatesToFireStore(data: LocationResult) {
-        var dt: LocalDateTime? = null
-        var dtStr: String? = null
-        val deviceID = 6
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            dt = LocalDateTime.now()
-            dtStr = LocalDateTime.now().toString()
-        }
+        val c: Date = Calendar.getInstance().time
+        val df = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val formattedDate = df.format(c)
 
         val db = Firebase.firestore
+        db.firestoreSettings = firestoreSettings {
+            isPersistenceEnabled = true
+        }
+
         val mappedData = mapOf(
-            "datetime" to dt,
-            "datetime_str" to dtStr,
+            "date_str" to formattedDate,
+            "area_accessible" to accessibility.value,
             "location" to data.lastLocation,
-            "device" to deviceID,
+            "device" to deviceId,
         )
         db.collection("deliveryLocationTracking")
             .add(mappedData)
@@ -84,6 +91,10 @@ class LocationRepository @Inject constructor(
             .addOnFailureListener { e ->
                 Log.w("FIREBASE_", "Error: adding document", e)
             }
+    }
+
+    fun toggleAccessible() {
+        accessibility.value = accessibility.value.not()
     }
 
     private inner class Callback : LocationCallback() {

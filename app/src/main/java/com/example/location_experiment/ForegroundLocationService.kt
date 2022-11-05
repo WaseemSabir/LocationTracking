@@ -21,10 +21,8 @@ import androidx.lifecycle.lifecycleScope
 import com.example.location_experiment.ForegroundLocationService.LocalBinder
 import com.example.location_experiment.data.LocationPreferences
 import com.example.location_experiment.data.LocationRepository
-import com.example.location_experiment.ui.hasPermission
 import com.example.myapplication.R
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -102,7 +100,6 @@ class ForegroundLocationService : LifecycleService() {
     override fun onUnbind(intent: Intent?): Boolean {
         bindCount--
         lifecycleScope.launch {
-            delay(UNBIND_DELAY_MILLIS)
             manageLifetime()
         }
         return true
@@ -160,7 +157,7 @@ class ForegroundLocationService : LifecycleService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val stopIntent = PendingIntent.getService(
+        PendingIntent.getService(
             this,
             0,
             Intent(this, this::class.java).setAction(ACTION_STOP_UPDATES),
@@ -209,12 +206,15 @@ class ForegroundLocationService : LifecycleService() {
         locationRepository.stopLocationUpdates()
     }
 
+    fun toggleAccessibility() {
+        locationRepository.toggleAccessible()
+    }
+
     internal inner class LocalBinder : Binder() {
         fun getService(): ForegroundLocationService = this@ForegroundLocationService
     }
 
     private companion object {
-        const val UNBIND_DELAY_MILLIS = 500.toLong() // 0.5 seconds
         const val NOTIFICATION_ID = 1
         const val NOTIFICATION_CHANNEL_ID = "LocationUpdates"
         const val ACTION_STOP_UPDATES = "MYAPP.ACTION_STOP_UPDATES"

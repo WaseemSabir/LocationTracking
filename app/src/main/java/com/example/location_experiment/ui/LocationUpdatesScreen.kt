@@ -1,12 +1,18 @@
 package com.example.location_experiment.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.location.Location
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
+import androidx.compose.material.ButtonColors
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -16,36 +22,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.location_experiment.ui.theme.ForegroundLocationTheme
 
 
 @Composable
 fun LocationUpdatesScreen(
-    showDegradedExperience: Boolean,
-    needsPermissionRationale: Boolean,
-    openSettingsClick: () -> Unit,
+    deviceId: Int,
+    accessible: Boolean,
     onButtonClick: () -> Unit,
+    onToggleAccessibleAreas: () -> Unit,
     isLocationOn: Boolean,
     location: Location?
 ) {
-    var showRationaleDialog by remember { mutableStateOf(false) }
     var showStopConfirmationDialog by remember { mutableStateOf(false) }
+    var showPermissionRationale by remember { mutableStateOf(false) }
 
-    if (showRationaleDialog) {
-        CofirmationDialog(
-            title = "Location Permission is required.",
-            description = "To enable better tracking, we need to access your location.",
-            onConfirm = {
-                showRationaleDialog = false
-                onButtonClick()
-            },
-            onDismiss = { showRationaleDialog = false }
-        )
-    }
+    val context = LocalContext.current
 
     if (showStopConfirmationDialog) {
         CofirmationDialog(
@@ -61,13 +60,30 @@ fun LocationUpdatesScreen(
         )
     }
 
+    if (showPermissionRationale) {
+        CofirmationDialog(
+            title = "Allow all the time",
+            description = "Location permission is required to access your location",
+            onConfirm = {
+                showPermissionRationale = false
+                onButtonClick()
+            },
+            onDismiss = {
+                showPermissionRationale = false
+            }
+        )
+    }
+
     fun onClick() {
-        if (needsPermissionRationale) {
-            showRationaleDialog = true
-        } else if (showDegradedExperience) {
-            openSettingsClick()
-        } else if (isLocationOn) {
+        if (isLocationOn) {
             showStopConfirmationDialog = true
+        } else if (
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            showPermissionRationale = true
         } else {
             onButtonClick()
         }
@@ -80,17 +96,10 @@ fun LocationUpdatesScreen(
             "Waiting for location..."
         }
 
-        showDegradedExperience -> "Location Permission is required! Please set the permission to"
         else -> "Not started!"
-    }
-    val secondaryMessage = when {
-        showDegradedExperience -> "Allow all the time."
-        else -> null
     }
     val label = if (isLocationOn) {
         "Stop Getting Location"
-    } else if (showDegradedExperience) {
-        "Open Settings"
     } else {
         "Start Getting Location"
     }
@@ -102,26 +111,36 @@ fun LocationUpdatesScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
+        Text(
+            text = "Device: $deviceId",
+            style = MaterialTheme.typography.h5,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.h6,
+            textAlign = TextAlign.Center
+        )
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceAround
         ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.h6,
-                textAlign = TextAlign.Center
-            )
-            if (secondaryMessage != null) {
-                Text(
-                    text = secondaryMessage,
-                    style = MaterialTheme.typography.h6,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colors.secondary
-                )
+            Button(onClick = { onClick() }) {
+                Text(text = label)
             }
-        }
-        Button(onClick = { onClick() }) {
-            Text(text = label)
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = { onToggleAccessibleAreas() },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = if (accessible.not()) Color.Red else Color.Green,
+                    contentColor = Color.Black
+                )
+            ) {
+                if (accessible) {
+                    Text(text = "Area is Accessible")
+                } else {
+                    Text(text = "Area is Not Accessible")
+                }
+            }
         }
     }
 }
@@ -160,10 +179,10 @@ fun CofirmationDialog(
 fun LocationUpdatesScreenPreview() {
     ForegroundLocationTheme {
         LocationUpdatesScreen(
-            showDegradedExperience = false,
-            needsPermissionRationale = false,
-            openSettingsClick = {},
+            deviceId = 1,
+            accessible = false,
             onButtonClick = {},
+            onToggleAccessibleAreas = {},
             isLocationOn = true,
             location = null,
         )
