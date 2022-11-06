@@ -38,7 +38,7 @@ class LocationRepository @Inject constructor(
     private val _lastLocation = MutableStateFlow<Location?>(null)
     val lastLocation = _lastLocation.asStateFlow()
 
-    val deviceId = 100
+    val deviceId = 6
 
     @SuppressLint("MissingPermission") // Only called when holding location permission.
     fun startLocationUpdates() {
