@@ -9,13 +9,13 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.firestoreSettings
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.text.SimpleDateFormat
-import java.time.LocalDateTime
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -38,7 +38,7 @@ class LocationRepository @Inject constructor(
     private val _lastLocation = MutableStateFlow<Location?>(null)
     val lastLocation = _lastLocation.asStateFlow()
 
-    val deviceId = 6
+    val deviceId = 1
 
     @SuppressLint("MissingPermission") // Only called when holding location permission.
     fun startLocationUpdates() {
@@ -79,6 +79,7 @@ class LocationRepository @Inject constructor(
             "area_accessible" to accessibility.value,
             "location" to data.lastLocation,
             "device" to deviceId,
+            "serverTimestamp" to FieldValue.serverTimestamp()
         )
         db.collection("deliveryLocationTracking")
             .add(mappedData)

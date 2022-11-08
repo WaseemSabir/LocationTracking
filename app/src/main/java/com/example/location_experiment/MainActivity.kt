@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -28,6 +29,7 @@ import com.example.location_experiment.ui.LocationUpdatesScreen
 import com.example.location_experiment.ui.ServiceUnavailableScreen
 import com.example.location_experiment.ui.theme.ForegroundLocationTheme
 import com.example.myapplication.R
+import com.judemanutd.autostarter.AutoStartPermissionHelper
 import dagger.hilt.android.AndroidEntryPoint
 import permissions.dispatcher.NeedsPermission
 import permissions.dispatcher.RuntimePermissions
@@ -41,8 +43,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (hasPermission(permission.ACCESS_BACKGROUND_LOCATION)) {
-            viewModel.toggleLocationUpdates()
+        val available =
+            AutoStartPermissionHelper.getInstance().isAutoStartPermissionAvailable(this, true)
+        if (available.not()) {
+            viewModel.setShowAllowInBackgroundAlreadyShownTrue()
         }
 
         setContent {
@@ -61,10 +65,18 @@ class MainActivity : ComponentActivity() {
                             .padding(it)
                     ) {
                         MainScreen(
+                            viewModel = viewModel,
+                            onAllowInBackgroundClick = {
+                                try {
+                                    AutoStartPermissionHelper.getInstance()
+                                        .getAutoStartPermission(this@MainActivity)
+                                } catch (err: Exception) {
+                                    Log.w("LOC_BACKGROUND", err.toString())
+                                }
+                            },
                             onButtonClick = {
                                 checkAndStartLocationUpdates()
-                            },
-                            viewModel = viewModel
+                            }
                         )
                     }
                 }
@@ -118,12 +130,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
+    onAllowInBackgroundClick: () -> Unit,
     onButtonClick: () -> Unit
 ) {
     val uiState by viewModel.playServicesAvailableState.collectAsState()
     val isLocationOn by viewModel.isReceivingLocationUpdates.collectAsState()
     val lastLocation by viewModel.lastLocation.collectAsState()
     val isAccessible by viewModel.isAccessible.collectAsState()
+    val allowInBackgroundAlreadyShown by viewModel.allowInBackgroundAlreadyShown.collectAsState()
 
     when (uiState) {
         Initializing -> InitializingScreen()
@@ -131,6 +145,14 @@ fun MainScreen(
         PlayServicesAvailable -> {
             LocationUpdatesScreen(
                 accessible = isAccessible,
+                showAllowInBackgroundDialog = allowInBackgroundAlreadyShown.not(),
+                alreadyShownClick = {
+                    viewModel.setShowAllowInBackgroundAlreadyShownTrue()
+                },
+                goToSettingsForBackgroundAllowClick = {
+                    onAllowInBackgroundClick()
+                    viewModel.setShowAllowInBackgroundAlreadyShownTrue()
+                },
                 onToggleAccessibleAreas = {
                     viewModel.toggleAccessibility()
                 },

@@ -10,6 +10,7 @@ import com.example.location_experiment.data.LocationPreferences
 import com.example.location_experiment.data.LocationRepository
 import com.example.location_experiment.data.PlayServicesAvailabilityChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
@@ -34,10 +35,15 @@ class MainViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Initializing)
 
+    val allowInBackgroundAlreadyShown = MutableStateFlow(false)
     val isReceivingLocationUpdates = locationRepository.isReceivingLocationUpdates
     val lastLocation = locationRepository.lastLocation
     val deviceId = locationRepository.deviceId
     val isAccessible = locationRepository.isAccessible
+
+    fun setShowAllowInBackgroundAlreadyShownTrue() {
+        allowInBackgroundAlreadyShown.value = true
+    }
 
     fun toggleLocationUpdates() {
         if (isReceivingLocationUpdates.value) {
